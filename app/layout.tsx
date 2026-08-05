@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { AuthProvider } from "@/context/AuthContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 import "./globals.css";
-
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 
@@ -17,10 +18,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Header />
-        <main>{children}</main>
-        <Footer />
-      </body>
+  <AuthProvider>
+  <WishlistProvider>
+    <Header />
+    <main>{children}</main>
+    <Footer />
+  </WishlistProvider>
+</AuthProvider>
+</body>
     </html>
   );
 }

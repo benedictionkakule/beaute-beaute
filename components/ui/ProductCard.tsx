@@ -1,5 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingBag, Star } from "lucide-react";
@@ -22,6 +26,46 @@ export default function ProductCard({
 }: ProductCardProps) {
   const addToCart = useCartStore((state) => state.addToCart);
 
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const {
+    wishlist,
+    addWishlistItem,
+    removeWishlistItem,
+  } = useWishlist();
+
+  const [saving, setSaving] = useState(false);
+
+  const isWishlisted = wishlist.some(
+    (item) => item.productId === id
+  );
+
+  async function handleWishlist(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      router.push(`/login?redirect=/shop/${id}`);
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      if (isWishlisted) {
+        await removeWishlistItem(id);
+      } else {
+        await addWishlistItem(id);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Link href={`/shop/${id}`}>
       <div className="group overflow-hidden rounded-3xl border border-pink-100 bg-white shadow-sm transition hover:-translate-y-2 hover:shadow-xl">
@@ -40,9 +84,28 @@ export default function ProductCard({
 
           <button
             type="button"
-            className="absolute right-4 top-4 rounded-full bg-white p-2 shadow"
+            disabled={saving}
+            onClick={handleWishlist}
+            className="absolute right-4 top-4 rounded-full bg-white p-2 shadow transition hover:bg-pink-50 disabled:opacity-50"
+            aria-label={
+              isWishlisted
+                ? "Remove from wishlist"
+                : "Add to wishlist"
+            }
           >
-            <Heart size={18} />
+            <Heart
+              size={18}
+              fill={
+                isWishlisted
+                  ? "currentColor"
+                  : "none"
+              }
+              className={
+                isWishlisted
+                  ? "text-pink-500"
+                  : "text-gray-700"
+              }
+            />
           </button>
         </div>
 
@@ -61,7 +124,10 @@ export default function ProductCard({
             <Star size={16} fill="currentColor" />
             <Star size={16} fill="currentColor" />
             <Star size={16} fill="currentColor" />
-            <span className="ml-2 text-sm text-gray-500">(24)</span>
+
+            <span className="ml-2 text-sm text-gray-500">
+              (24)
+            </span>
           </div>
 
           <div className="mt-5 flex items-center justify-between">

@@ -1,11 +1,12 @@
 "use client";
-
+import { useAuth } from "@/context/AuthContext";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { products } from "@/data/products";
 import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
+import { useWishlist } from "@/context/WishlistContext";
 import {
   Search,
   Heart,
@@ -19,19 +20,57 @@ export default function Header() {
   const [query, setQuery] = useState("");
 const [selectedIndex, setSelectedIndex] = useState(-1);
 const searchRef = useRef<HTMLDivElement>(null);
+const accountRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+const { user, fetchUser, logout } = useAuth();
+const { wishlist } = useWishlist();
+
+const wishlistCount = wishlist.length;
+const [accountOpen, setAccountOpen] = useState(false);
+
+async function handleLogout() {
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+
+    logout();
+    setAccountOpen(false);
+
+    router.push("/");
+    router.refresh();
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
   useEffect(() => {
   function handleClickOutside(event: MouseEvent) {
+    const target = event.target as Node;
+
+    // Close search
     if (
       searchRef.current &&
-      !searchRef.current.contains(event.target as Node)
+      !searchRef.current.contains(target)
     ) {
       setQuery("");
       setSelectedIndex(-1);
     }
+
+    // Close account menu
+    if (
+      accountRef.current &&
+      !accountRef.current.contains(target)
+    ) {
+      setAccountOpen(false);
+    }
   }
 
-  document.addEventListener("mousedown", handleClickOutside);
+  document.addEventListener(
+    "mousedown",
+    handleClickOutside
+  );
 
   return () => {
     document.removeEventListener(
@@ -150,19 +189,115 @@ const filteredProducts =
 
           
 
-          <button
-            className="rounded-full p-2 text-[#8B3A62] transition hover:bg-pink-100 hover:text-[#C85A8C]"
-            aria-label="Wishlist"
-          >
-            <Heart size={22} strokeWidth={2.2} />
-          </button>
+          <Link
+  href={user ? "/wishlist" : "/login?redirect=/wishlist"}
+  className="relative rounded-full p-2 transition hover:bg-pink-100"
+>
+  <Heart
+    size={22}
+    fill={wishlistCount > 0 ? "currentColor" : "none"}
+    className={
+      wishlistCount > 0
+        ? "text-pink-500"
+        : "text-[#8B3A62]"
+    }
+  />
 
-          <button
-            className="rounded-full p-2 text-[#8B3A62] transition hover:bg-pink-100 hover:text-[#C85A8C]"
-            aria-label="Account"
-          >
-            <User size={22} strokeWidth={2.2} />
-          </button>
+  {wishlistCount > 0 && (
+    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-pink-500 text-xs text-white">
+      {wishlistCount}
+    </span>
+  )}
+</Link>
+
+          {user ? (
+  <div ref={accountRef} className="relative">
+
+    <button
+      onClick={() => setAccountOpen(!accountOpen)}
+      className="rounded-full px-3 py-2 text-sm font-medium text-[#8B3A62] transition hover:bg-pink-100"
+    >
+      Hi, {user.name} ▼
+    </button>
+
+
+    {accountOpen && (
+      <div className="absolute right-0 top-12 w-48 rounded-2xl border border-pink-100 bg-white p-2 shadow-xl">
+
+        <Link
+          href="/profile"
+          className="block rounded-lg px-4 py-3 hover:bg-pink-50"
+        >
+          👤 My Profile
+        </Link>
+
+
+        <Link
+          href="/orders"
+          className="block rounded-lg px-4 py-3 hover:bg-pink-50"
+        >
+          📦 My Orders
+        </Link>
+
+
+        <Link
+          href="/wishlist"
+          className="block rounded-lg px-4 py-3 hover:bg-pink-50"
+        >
+          ❤️ Wishlist
+        </Link>
+
+
+        <button
+  onClick={handleLogout}
+  className="block w-full rounded-lg px-4 py-3 text-left hover:bg-pink-50"
+>
+  🚪 Logout
+</button>
+
+      </div>
+    )}
+
+  </div>
+) : (
+
+  <div ref={accountRef} className="relative">
+
+    <button
+      onClick={() => setAccountOpen(!accountOpen)}
+      className="rounded-full p-2 text-[#8B3A62] transition hover:bg-pink-100 hover:text-[#C85A8C]"
+      aria-label="Account"
+    >
+      <User size={22} strokeWidth={2.2} />
+    </button>
+
+
+    {accountOpen && (
+      <div className="absolute right-0 top-12 w-52 rounded-2xl border border-pink-100 bg-white p-2 shadow-xl">
+
+        <Link
+          href="/login"
+          onClick={() => setAccountOpen(false)}
+          className="block rounded-lg px-4 py-3 hover:bg-pink-50"
+        >
+          👤 Login
+        </Link>
+
+
+        <Link
+          href="/register"
+          onClick={() => setAccountOpen(false)}
+          className="block rounded-lg px-4 py-3 hover:bg-pink-50"
+        >
+          ✨ Create Account
+        </Link>
+
+      </div>
+    )}
+
+  </div>
+
+)}
 
           {/* Shopping Cart */}
           <Link

@@ -1,29 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCartStore } from "@/store/cartStore";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Heart } from "lucide-react";
+import { Heart, ShoppingBag } from "lucide-react";
 
 import { products } from "@/data/products";
-import { useWishlistStore } from "@/store/wishlistStore";
+import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 export default function ShopPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-
+  const addToCart = useCartStore(
+  (state) => state.addToCart
+);
   const searchQuery = searchParams.get("search") ?? "";
   const categoryQuery = searchParams.get("category") ?? "";
-
   const [search, setSearch] = useState("");
-
-  const addToWishlist = useWishlistStore(
-    (state) => state.addToWishlist
-  );
-
-  const isInWishlist = useWishlistStore(
-    (state) => state.isInWishlist
-  );
+  const { user } = useAuth();
+  const {
+    wishlist,
+    addWishlistItem,
+    removeWishlistItem,
+  } = useWishlist();
 
   useEffect(() => {
     if (searchQuery) {
@@ -44,11 +46,35 @@ export default function ShopPage() {
     );
   });
 
+  async function handleWishlist(productId: number) {
+    if (!user) {
+      router.push(`/login?redirect=/shop`);
+      return;
+    }
+
+    const isWishlisted = wishlist.some(
+      (item) => item.productId === productId
+    );
+
+    try {
+      if (isWishlisted) {
+        await removeWishlistItem(productId);
+      } else {
+        await addWishlistItem(productId);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong.");
+    }
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-6 py-16">
       {/* Heading */}
       <h1 className="text-4xl font-bold text-gray-900">
-        {categoryQuery ? `${categoryQuery} Products` : "Shop"}
+        {categoryQuery
+          ? `${categoryQuery} Products`
+          : "Shop"}
       </h1>
 
       <p className="mt-2 text-gray-600">
@@ -81,7 +107,10 @@ export default function ShopPage() {
       {/* Results */}
       <p className="mt-4 text-sm text-gray-500">
         {filteredProducts.length}{" "}
-        {filteredProducts.length === 1 ? "product" : "products"} found
+        {filteredProducts.length === 1
+          ? "product"
+          : "products"}{" "}
+        found
       </p>
 
       {filteredProducts.length === 0 ? (
@@ -96,62 +125,100 @@ export default function ShopPage() {
         </div>
       ) : (
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="overflow-hidden rounded-2xl border border-pink-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
-            >
-              {/* Product Image */}
-              <div className="relative">
-                {/* Wishlist */}
-                <button
-                  onClick={() =>
-                    addToWishlist({
-                      id: product.id,
-                      name: product.name,
-                      price: product.price,
-                      image: product.image,
-                    })
-                  }
-                  className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 shadow-md transition hover:bg-pink-50"
-                >
-                  <Heart
-                    size={20}
-                    fill={isInWishlist(product.id) ? "#ec4899" : "none"}
-                    className="text-pink-500"
-                  />
-                </button>
+          {filteredProducts.map((product) => {
+            const isWishlisted = wishlist.some(
+              (item) => item.productId === product.id
+            );
 
-                <Link href={`/shop/${product.id}`}>
-                  <div className="relative h-64">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
+            return (
+              <div
+                key={product.id}
+                className="overflow-hidden rounded-2xl border border-pink-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                {/* Product Image */}
+                <div className="relative">
+                  {/* Wishlist */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleWishlist(product.id)
+                    }
+                    className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 shadow-md transition hover:bg-pink-50"
+                    aria-label={
+                      isWishlisted
+                        ? "Remove from wishlist"
+                        : "Add to wishlist"
+                    }
+                  >
+                    <Heart
+                      size={20}
+                      fill={
+                        isWishlisted
+                          ? "currentColor"
+                          : "none"
+                      }
+                      className={
+                        isWishlisted
+                          ? "text-pink-500"
+                          : "text-gray-700"
+                      }
                     />
-                  </div>
-                </Link>
-              </div>
+                  </button>
 
-              {/* Product Details */}
-              <Link href={`/shop/${product.id}`}>
-                <div className="p-5">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {product.name}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-gray-500">
-                    {product.category}
-                  </p>
-
-                  <p className="mt-3 text-lg font-bold text-pink-500">
-                    ${product.price.toFixed(2)}
-                  </p>
+                  <Link href={`/shop/${product.id}`}>
+                    <div className="relative h-64">
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </Link>
                 </div>
-              </Link>
-            </div>
-          ))}
+
+{/* Product Details */}
+<div className="p-5">
+  <Link href={`/shop/${product.id}`}>
+    <h2 className="text-lg font-semibold text-gray-900">
+      {product.name}
+    </h2>
+
+    <p className="mt-1 text-sm text-gray-500">
+      {product.category}
+    </p>
+  </Link>
+
+  <div className="mt-4 flex items-center justify-between">
+    <p className="text-lg font-bold text-pink-500">
+      ${product.price.toFixed(2)}
+    </p>
+
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        addToCart({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          quantity: 1,
+        });
+      }}
+      className="rounded-full bg-pink-500 p-3 text-white transition hover:bg-pink-600"
+      aria-label="Add to cart"
+    >
+      <ShoppingBag size={20} />
+    </button>
+  </div>
+</div>
+
+              </div>
+            );
+          })}
         </div>
       )}
     </main>

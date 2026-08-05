@@ -1,6 +1,9 @@
 import Image from "next/image";
+import WishlistButton from "@/components/ui/WishlistButton";
 import { notFound } from "next/navigation";
-import { Star } from "lucide-react";
+import { Heart, Star } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { products } from "@/data/products";
 import AddToCartButton from "@/components/ui/AddToCartButton";
 
@@ -86,11 +89,12 @@ export default async function ProductPage({ params }: Props) {
             ✓ {product.stock}
           </p>
 
+{/* Cart & Wishlist */}
+<div className="mt-8 flex flex-wrap items-center gap-3">
+  <AddToCartButton product={product} />
 
-          {/* Cart Button */}
-          <div className="mt-8">
-            <AddToCartButton product={product} />
-          </div>
+  <WishlistButton productId={product.id} />
+</div>
 
         </div>
 
