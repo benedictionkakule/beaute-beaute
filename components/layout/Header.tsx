@@ -16,17 +16,21 @@ import {
 } from "lucide-react";
 
 export default function Header() {
-  const cart = useCartStore((state) => state.cart);
-  const [query, setQuery] = useState("");
+const cart = useCartStore((state) => state.cart);
+const [query, setQuery] = useState("");
+const [mounted, setMounted] = useState(false);
 const [selectedIndex, setSelectedIndex] = useState(-1);
 const searchRef = useRef<HTMLDivElement>(null);
 const accountRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+const router = useRouter();
 const { user, fetchUser, logout } = useAuth();
 const { wishlist } = useWishlist();
-
 const wishlistCount = wishlist.length;
 const [accountOpen, setAccountOpen] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
 
 async function handleLogout() {
   try {
@@ -43,7 +47,9 @@ async function handleLogout() {
   } catch (error) {
     console.error(error);
   }
-}
+}   
+
+
 
   useEffect(() => {
   function handleClickOutside(event: MouseEvent) {
@@ -189,10 +195,37 @@ const filteredProducts =
 
           
 
-          <Link
-  href={user ? "/wishlist" : "/login?redirect=/wishlist"}
-  className="relative rounded-full p-2 transition hover:bg-pink-100"
->
+         {mounted ? (
+  <Link
+    href={user ? "/wishlist" : "/login?redirect=/wishlist"}
+    className="relative rounded-full p-2 transition hover:bg-pink-100"
+    aria-label="Wishlist"
+  >
+    <Heart
+      size={22}
+      fill={wishlistCount > 0 ? "currentColor" : "none"}
+      className={
+        wishlistCount > 0
+          ? "text-pink-500"
+          : "text-[#8B3A62]"
+      }
+    />
+
+    {wishlistCount > 0 && (
+      <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-pink-500 text-xs text-white">
+        {wishlistCount}
+      </span>
+    )}
+  </Link>
+) : (
+  <button
+    type="button"
+    className="rounded-full p-2 text-[#8B3A62]"
+    aria-label="Wishlist"
+  >
+    <Heart size={22} />
+  </button>
+)}
   <Heart
     size={22}
     fill={wishlistCount > 0 ? "currentColor" : "none"}
@@ -208,7 +241,6 @@ const filteredProducts =
       {wishlistCount}
     </span>
   )}
-</Link>
 
           {user ? (
   <div ref={accountRef} className="relative">
